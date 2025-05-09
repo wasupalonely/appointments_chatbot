@@ -296,10 +296,10 @@ class ClinicBot:
         except Exception as e:
             logger.warning(f"No se pudo configurar el JobQueue: {e}")
     
-    def run(self) -> None:
-        """Inicia el bot"""
-        logger.info("Iniciando el bot")
-        self.application.run_polling()
+  def run(self) -> None:
+    """Inicia el bot"""
+    logger.info("Iniciando el bot")
+      return
     
     # Métodos auxiliares
     async def send_and_track_message(self, update: Update, context: CallbackContext, 
