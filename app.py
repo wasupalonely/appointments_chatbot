@@ -4,6 +4,7 @@ Este archivo combina un servidor web simple con el bot de Telegram
 """
 import os
 import threading
+import asyncio
 import logging
 import time
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -49,6 +50,10 @@ class BotServerHandler(BaseHTTPRequestHandler):
             self.wfile.write(b'<p>El bot esta activo y ejecutandose.</p>')
             self.wfile.write(b'<p>Visita <a href="/health">/health</a> para ver el estado del bot.</p>')
             self.wfile.write(b'</body></html>')
+    
+    # Soporte para método HEAD (necesario para los health checks de Render)
+    def do_HEAD(self):
+        self._set_response()
 
 def run_web_server():
     """Ejecuta el servidor web en el puerto especificado por Render"""
@@ -58,25 +63,42 @@ def run_web_server():
     logger.info(f'Iniciando servidor HTTP en puerto {port}')
     httpd.serve_forever()
 
-def run_telegram_bot():
-    """Ejecuta el bot de Telegram en un hilo separado"""
+async def run_bot_async():
+    """Ejecuta el bot de Telegram de forma asíncrona"""
     global BOT_RUNNING, BOT_START_TIME
     
     try:
-        # Intentar cargar el módulo del bot
+        # Importar el módulo del bot
         from faq_bot import ClinicBot
         
         logger.info("Iniciando bot de Telegram...")
         BOT_START_TIME = time.time()
         bot = ClinicBot()
         BOT_RUNNING = True
-        bot.run()  # Este método bloquea hasta que el bot se detiene
         
-        logger.warning("El bot de Telegram se ha detenido.")
-        BOT_RUNNING = False
+        # Ejecutar el bot (método asíncrono)
+        await bot.application.initialize()
+        await bot.application.start()
+        await bot.application.updater.start_polling()
+        
+        logger.info("Bot de Telegram iniciado correctamente.")
+        
+        # Mantener el bot en ejecución
+        try:
+            # Mantener el bot en funcionamiento hasta que se cancele
+            await bot.application.updater.stop_on_signal()
+        finally:
+            # Cerrar correctamente cuando se detenga
+            await bot.application.stop()
+            await bot.application.shutdown()
+            
     except Exception as e:
         logger.error(f"Error al iniciar el bot de Telegram: {e}")
         BOT_RUNNING = False
+        
+def bot_thread_function():
+    """Función que se ejecuta en un hilo para iniciar el bot con su propio bucle de eventos"""
+    asyncio.run(run_bot_async())
 
 def main():
     """Función principal que inicia el servidor web y el bot"""
@@ -86,8 +108,8 @@ def main():
     server_thread.start()
     logger.info("Servidor web iniciado en segundo plano")
     
-    # Iniciar el bot en un hilo separado
-    bot_thread = threading.Thread(target=run_telegram_bot, daemon=True)
+    # Iniciar el bot en un hilo separado con su propio bucle de eventos
+    bot_thread = threading.Thread(target=bot_thread_function, daemon=True)
     bot_thread.start()
     logger.info("Bot de Telegram iniciado en segundo plano")
     
