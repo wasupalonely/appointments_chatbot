@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: clinica-medica-bot
+    env: python
+    repo: https://github.com/tu-usuario/tu-repositorio # Cambia esto por tu repositorio
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    envVars:
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: PHOTOS_DIR
+        value: ./fotos
+    healthCheckPath: /health
+    # Configuración para asegurar que Render no reinicia el servicio innecesariamente
+    autoDeploy: false
+    numInstances: 1
