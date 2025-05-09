@@ -79,19 +79,19 @@ async def run_bot_async():
         # Ejecutar el bot (método asíncrono)
         await bot.application.initialize()
         await bot.application.start()
+        
+        # Iniciar el polling - CAMBIO: No use updater.start_polling()
         await bot.application.updater.start_polling()
         
         logger.info("Bot de Telegram iniciado correctamente.")
         
-        # Mantener el bot en ejecución
+        # Mantener el bot en ejecución - IMPORTANTE: No intentar detenerlo aquí
         try:
-            # Mantener el bot en funcionamiento hasta que se cancele
             await bot.application.updater.stop_on_signal()
         finally:
             # Cerrar correctamente cuando se detenga
-            await bot.application.stop()
+            BOT_RUNNING = False
             await bot.application.shutdown()
-            
     except Exception as e:
         logger.error(f"Error al iniciar el bot de Telegram: {e}")
         BOT_RUNNING = False
