@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 # Variable global para el estado del bot
 BOT_RUNNING = False
 BOT_START_TIME = None
+BOT_INSTANCE = None
 
 class BotServerHandler(BaseHTTPRequestHandler):
     """Manejador para el servidor HTTP simple"""
@@ -65,7 +66,7 @@ def run_web_server():
 
 async def run_bot_async():
     """Ejecuta el bot de Telegram de forma asíncrona"""
-    global BOT_RUNNING, BOT_START_TIME
+    global BOT_RUNNING, BOT_START_TIME, BOT_INSTANCE
     
     try:
         # Importar el módulo del bot
@@ -74,24 +75,20 @@ async def run_bot_async():
         logger.info("Iniciando bot de Telegram...")
         BOT_START_TIME = time.time()
         bot = ClinicBot()
-        BOT_RUNNING = True
+        BOT_INSTANCE = bot
         
         # Ejecutar el bot (método asíncrono)
         await bot.application.initialize()
         await bot.application.start()
-        
-        # Iniciar el polling - CAMBIO: No use updater.start_polling()
         await bot.application.updater.start_polling()
         
         logger.info("Bot de Telegram iniciado correctamente.")
+        BOT_RUNNING = True
         
-        # Mantener el bot en ejecución - IMPORTANTE: No intentar detenerlo aquí
-        try:
-            await bot.application.updater.stop_on_signal()
-        finally:
-            # Cerrar correctamente cuando se detenga
-            BOT_RUNNING = False
-            await bot.application.shutdown()
+        # Mantener el bot en ejecución indefinidamente
+        # No llamar a stop_on_signal() aquí
+        while True:
+            await asyncio.sleep(10)  # Dormir y continuar el bucle
     except Exception as e:
         logger.error(f"Error al iniciar el bot de Telegram: {e}")
         BOT_RUNNING = False
